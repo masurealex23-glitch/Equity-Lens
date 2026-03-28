@@ -1,0 +1,1173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EquityLens — Financial Intelligence Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=IBM+Plex+Mono:wght@300;400;500&family=Syne:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  :root {
+    --bg: #0d0f14;
+    --surface: #13161d;
+    --surface2: #1a1e28;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.13);
+    --text: #e8eaf0;
+    --text-muted: #7a7f94;
+    --text-dim: #4a4f63;
+    --green: #00e5a0;
+    --green-dim: rgba(0,229,160,0.12);
+    --red: #ff4d6a;
+    --red-dim: rgba(255,77,106,0.12);
+    --amber: #f5a623;
+    --amber-dim: rgba(245,166,35,0.12);
+    --blue: #4d9fff;
+    --blue-dim: rgba(77,159,255,0.1);
+    --accent: #7c5cfc;
+    --accent-dim: rgba(124,92,252,0.15);
+    --font-display: 'DM Serif Display', serif;
+    --font-mono: 'IBM Plex Mono', monospace;
+    --font-ui: 'Syne', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-ui);
+    min-height: 100vh;
+    line-height: 1.5;
+  }
+  /* NAV */
+  nav {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 32px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    position: sticky; top: 0; z-index: 100;
+  }
+  .nav-brand {
+    display: flex; align-items: center; gap: 10px;
+  }
+  .nav-logo {
+    width: 28px; height: 28px;
+    background: var(--accent);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-mono); font-size: 13px; font-weight: 500; color: #fff;
+  }
+  .nav-title { font-size: 15px; font-weight: 600; letter-spacing: 0.02em; }
+  .nav-subtitle { font-size: 11px; color: var(--text-muted); font-family: var(--font-mono); margin-left: 10px; }
+  .nav-right { display: flex; align-items: center; gap: 16px; }
+  .live-badge {
+    display: flex; align-items: center; gap: 6px;
+    font-family: var(--font-mono); font-size: 11px; color: var(--green);
+    background: var(--green-dim); padding: 4px 10px; border-radius: 20px;
+    border: 1px solid rgba(0,229,160,0.2);
+  }
+  .live-dot {
+    width: 6px; height: 6px; border-radius: 50%; background: var(--green);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
+  .nav-time { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); }
+
+  /* LAYOUT */
+  .main { padding: 24px 32px; max-width: 1600px; margin: 0 auto; }
+  .grid { display: grid; gap: 16px; }
+
+  /* COMPANY SELECTOR */
+  .company-selector {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 12px;
+    padding: 20px 24px;
+    display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
+  }
+  .selector-label { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; }
+  .company-select {
+    background: var(--surface2); border: 1px solid var(--border2);
+    color: var(--text); font-family: var(--font-ui); font-size: 14px; font-weight: 600;
+    padding: 8px 14px; border-radius: 8px; cursor: pointer; outline: none;
+    appearance: none; min-width: 220px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%237a7f94' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px;
+  }
+  .company-select:focus { border-color: var(--accent); }
+  .company-info { display: flex; align-items: center; gap: 12px; }
+  .company-name { font-size: 22px; font-weight: 700; }
+  .company-sector { font-size: 11px; font-family: var(--font-mono); color: var(--text-muted); background: var(--surface2); padding: 3px 8px; border-radius: 4px; }
+  .price-display { margin-left: auto; text-align: right; }
+  .current-price { font-family: var(--font-mono); font-size: 28px; font-weight: 500; }
+  .price-change { font-family: var(--font-mono); font-size: 13px; margin-top: 2px; }
+  .pos { color: var(--green); }
+  .neg { color: var(--red); }
+  .neu { color: var(--amber); }
+
+  /* METRICS GRID */
+  .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+  .metric-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 16px;
+    transition: border-color 0.2s;
+    cursor: default;
+  }
+  .metric-card:hover { border-color: var(--border2); }
+  .metric-label { font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 10px; }
+  .metric-value { font-family: var(--font-mono); font-size: 22px; font-weight: 500; }
+  .metric-sub { font-size: 11px; color: var(--text-muted); margin-top: 4px; font-family: var(--font-mono); }
+  .metric-bar { height: 3px; background: var(--border); border-radius: 2px; margin-top: 10px; overflow: hidden; }
+  .metric-bar-fill { height: 100%; border-radius: 2px; transition: width 0.5s ease; }
+  .metric-status { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; font-family: var(--font-mono); margin-top: 6px; padding: 2px 6px; border-radius: 3px; }
+  .status-good { background: var(--green-dim); color: var(--green); }
+  .status-warn { background: var(--amber-dim); color: var(--amber); }
+  .status-bad { background: var(--red-dim); color: var(--red); }
+  .status-neu { background: var(--blue-dim); color: var(--blue); }
+
+  /* METRIC TOOLTIP */
+  .metric-card { position: relative; }
+  .metric-card:hover { border-color: var(--accent); }
+  #metricTooltip {
+    position: fixed;
+    z-index: 9999;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 0.18s ease, transform 0.18s ease;
+    width: 260px;
+  }
+  #metricTooltip.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .mtt-inner {
+    background: #1a1e28;
+    border: 1px solid rgba(124,92,252,0.35);
+    border-radius: 10px;
+    padding: 14px 16px;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.55);
+  }
+  .mtt-name {
+    font-size: 12px; font-weight: 700; letter-spacing: 0.04em;
+    color: var(--accent); margin-bottom: 2px;
+  }
+  .mtt-full {
+    font-size: 11px; color: var(--text-muted); font-family: var(--font-mono);
+    margin-bottom: 10px;
+  }
+  .mtt-divider { height: 1px; background: rgba(255,255,255,0.07); margin-bottom: 10px; }
+  .mtt-desc { font-size: 12px; color: var(--text); line-height: 1.6; margin-bottom: 10px; }
+  .mtt-formula-label {
+    font-family: var(--font-mono); font-size: 9px; text-transform: uppercase;
+    letter-spacing: 0.1em; color: var(--text-dim); margin-bottom: 5px;
+  }
+  .mtt-formula {
+    font-family: var(--font-mono); font-size: 11px; font-weight: 500;
+    color: var(--amber); background: rgba(245,166,35,0.08);
+    border: 1px solid rgba(245,166,35,0.2);
+    border-radius: 5px; padding: 6px 10px; line-height: 1.7;
+  }
+  .mtt-interp-label {
+    font-family: var(--font-mono); font-size: 9px; text-transform: uppercase;
+    letter-spacing: 0.1em; color: var(--text-dim); margin-top: 10px; margin-bottom: 5px;
+  }
+  .mtt-interp { font-size: 11px; color: var(--text-muted); line-height: 1.55; }
+
+  /* TWO COLUMN LAYOUT */
+  .two-col { display: grid; grid-template-columns: 1fr 380px; gap: 16px; }
+  @media (max-width: 1100px) { .two-col { grid-template-columns: 1fr; } }
+
+  /* CHART PANEL */
+  .panel {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px 24px;
+  }
+  .panel-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
+  .panel-title { font-size: 13px; font-weight: 600; letter-spacing: 0.03em; }
+  .panel-title-mono { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); }
+  .period-tabs { display: flex; gap: 4px; }
+  .period-tab {
+    font-family: var(--font-mono); font-size: 11px; padding: 4px 10px;
+    border-radius: 4px; cursor: pointer; border: none;
+    background: transparent; color: var(--text-muted); transition: all 0.15s;
+  }
+  .period-tab.active { background: var(--accent-dim); color: var(--accent); border: 1px solid rgba(124,92,252,0.3); }
+  .period-tab:hover:not(.active) { color: var(--text); }
+  .chart-wrap { position: relative; height: 240px; }
+
+  /* INTERACTIVE SLIDERS PANEL */
+  .sliders-panel { display: flex; flex-direction: column; gap: 0; }
+  .slider-row { padding: 14px 0; border-bottom: 1px solid var(--border); }
+  .slider-row:last-child { border-bottom: none; }
+  .slider-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .slider-name { font-size: 12px; font-weight: 600; }
+  .slider-val { font-family: var(--font-mono); font-size: 13px; color: var(--accent); font-weight: 500; }
+  input[type=range] {
+    width: 100%; height: 4px; -webkit-appearance: none; appearance: none;
+    background: var(--border2); border-radius: 2px; outline: none; cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 14px; height: 14px;
+    border-radius: 50%; background: var(--accent); cursor: pointer;
+    border: 2px solid var(--bg);
+    box-shadow: 0 0 0 1px var(--accent);
+  }
+  input[type=range]::-moz-range-thumb {
+    width: 14px; height: 14px; border-radius: 50%;
+    background: var(--accent); cursor: pointer; border: 2px solid var(--bg);
+  }
+  .slider-range-labels { display: flex; justify-content: space-between; margin-top: 4px; font-family: var(--font-mono); font-size: 10px; color: var(--text-dim); }
+  .derived-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+  .derived-item { background: var(--surface2); border-radius: 6px; padding: 10px; text-align: center; }
+  .derived-label { font-family: var(--font-mono); font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
+  .derived-value { font-family: var(--font-mono); font-size: 15px; font-weight: 500; }
+
+  /* AI SENTIMENT PANEL */
+  .ai-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .ai-header {
+    padding: 16px 20px;
+    background: linear-gradient(135deg, rgba(124,92,252,0.15) 0%, rgba(77,159,255,0.08) 100%);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 12px;
+  }
+  .ai-icon {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: var(--accent); display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+  .ai-title { font-size: 13px; font-weight: 600; }
+  .ai-subtitle { font-size: 11px; color: var(--text-muted); font-family: var(--font-mono); }
+  .ai-body { padding: 16px 20px; }
+  .ai-trigger-btn {
+    width: 100%; padding: 10px 16px;
+    background: var(--accent); border: none; border-radius: 8px;
+    color: #fff; font-family: var(--font-ui); font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: opacity 0.15s, transform 0.1s;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    margin-bottom: 16px;
+  }
+  .ai-trigger-btn:hover { opacity: 0.9; }
+  .ai-trigger-btn:active { transform: scale(0.98); }
+  .ai-trigger-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .ai-loading {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 12px;
+    font-family: var(--font-mono); font-size: 12px; color: var(--text-muted);
+  }
+  .spinner {
+    width: 14px; height: 14px; border: 2px solid var(--border2);
+    border-top-color: var(--accent); border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .ai-output { display: flex; flex-direction: column; gap: 14px; }
+  .sentiment-meter { margin-bottom: 4px; }
+  .sentiment-label-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .sentiment-score { font-family: var(--font-mono); font-size: 24px; font-weight: 500; }
+  .sentiment-tag { font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 4px; }
+  .sentiment-bar-track { height: 6px; background: var(--border2); border-radius: 3px; overflow: hidden; }
+  .sentiment-bar-fill { height: 100%; border-radius: 3px; transition: width 1s ease; }
+  .ai-sections { display: flex; flex-direction: column; gap: 12px; }
+  .ai-section-title { font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 6px; }
+  .ai-text { font-size: 13px; line-height: 1.65; color: var(--text); }
+  .ai-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .ai-tag {
+    font-family: var(--font-mono); font-size: 10px; padding: 3px 8px;
+    border-radius: 3px; border: 1px solid;
+  }
+  .tag-pos { color: var(--green); border-color: rgba(0,229,160,0.3); background: var(--green-dim); }
+  .tag-neg { color: var(--red); border-color: rgba(255,77,106,0.3); background: var(--red-dim); }
+  .tag-neu { color: var(--blue); border-color: rgba(77,159,255,0.3); background: var(--blue-dim); }
+  .ai-divider { height: 1px; background: var(--border); }
+  .ai-placeholder { text-align: center; padding: 24px 0; }
+  .ai-placeholder-icon { font-size: 32px; margin-bottom: 8px; opacity: 0.5; }
+  .ai-placeholder-text { font-size: 13px; color: var(--text-muted); line-height: 1.6; }
+
+  /* COMPARISON TABLE */
+  .table-panel { overflow-x: auto; }
+  .fin-table { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 12px; }
+  .fin-table th {
+    text-align: left; padding: 8px 12px; font-size: 10px; font-weight: 500;
+    color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em;
+    border-bottom: 1px solid var(--border); background: var(--surface2);
+  }
+  .fin-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .fin-table tr:last-child td { border-bottom: none; }
+  .fin-table tr:hover td { background: var(--surface2); }
+  .fin-table .ticker { font-weight: 500; color: var(--accent); }
+  .pill {
+    display: inline-block; padding: 2px 7px; border-radius: 3px;
+    font-size: 10px; font-weight: 500;
+  }
+  .pill-good { background: var(--green-dim); color: var(--green); }
+  .pill-warn { background: var(--amber-dim); color: var(--amber); }
+  .pill-bad { background: var(--red-dim); color: var(--red); }
+
+  /* SECTOR CHART LABEL */
+  .sector-legend { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-muted); }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+  /* FOOTER */
+  .footer { text-align: center; padding: 24px; font-family: var(--font-mono); font-size: 11px; color: var(--text-dim); border-top: 1px solid var(--border); margin-top: 32px; }
+
+  /* SECTION DIVIDER */
+  .section-label { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-dim); margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+  .section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  /* SCENARIO BUILDER */
+  .scenario-output { margin-top: 14px; padding: 14px; background: var(--surface2); border-radius: 8px; border: 1px solid var(--border); }
+  .scenario-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; font-family: var(--font-mono); font-size: 12px; }
+  .scenario-key { color: var(--text-muted); }
+  .scenario-val { font-weight: 500; }
+  .fair-value-highlight { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+  .fair-value-label { font-size: 10px; font-family: var(--font-mono); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; }
+  .fair-value-number { font-family: var(--font-mono); font-size: 28px; font-weight: 500; }
+  .upside { font-family: var(--font-mono); font-size: 12px; margin-top: 2px; }
+
+  /* Tabs */
+  .tab-bar { display: flex; gap: 2px; background: var(--surface2); padding: 3px; border-radius: 8px; margin-bottom: 16px; }
+  .tab-btn {
+    flex: 1; padding: 7px 12px; border: none; background: transparent;
+    color: var(--text-muted); font-family: var(--font-ui); font-size: 12px; font-weight: 500;
+    border-radius: 6px; cursor: pointer; transition: all 0.15s;
+  }
+  .tab-btn.active { background: var(--surface); color: var(--text); }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  @media (max-width: 900px) { .three-col { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-brand">
+    <div class="nav-logo">EL</div>
+    <span class="nav-title">EquityLens</span>
+    <span class="nav-subtitle">Financial Intelligence Dashboard</span>
+  </div>
+  <div class="nav-right">
+    <div class="live-badge"><div class="live-dot"></div>LIVE DATA</div>
+    <div class="nav-time" id="navTime">—</div>
+  </div>
+</nav>
+
+<!-- METRIC TOOLTIP -->
+<div id="metricTooltip">
+  <div class="mtt-inner">
+    <div class="mtt-name" id="mttName"></div>
+    <div class="mtt-full" id="mttFull"></div>
+    <div class="mtt-divider"></div>
+    <div class="mtt-desc" id="mttDesc"></div>
+    <div class="mtt-formula-label">Formula</div>
+    <div class="mtt-formula" id="mttFormula"></div>
+    <div class="mtt-interp-label">How to read it</div>
+    <div class="mtt-interp" id="mttInterp"></div>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- COMPANY SELECTOR -->
+  <div class="company-selector" style="margin-bottom:16px;">
+    <div>
+      <div class="selector-label" style="margin-bottom:6px;">Select Company</div>
+      <select class="company-select" id="companySelect" onchange="loadCompany(this.value)">
+        <option value="AAPL">AAPL — Apple Inc.</option>
+        <option value="MSFT">MSFT — Microsoft Corp.</option>
+        <option value="NVDA">NVDA — NVIDIA Corp.</option>
+        <option value="GOOGL">GOOGL — Alphabet Inc.</option>
+        <option value="AMZN">AMZN — Amazon.com Inc.</option>
+        <option value="META">META — Meta Platforms</option>
+        <option value="TSLA">TSLA — Tesla Inc.</option>
+        <option value="JPM">JPM — JPMorgan Chase</option>
+        <option value="JNJ">JNJ — Johnson & Johnson</option>
+        <option value="V">V — Visa Inc.</option>
+        <option value="UNH">UNH — UnitedHealth Group</option>
+        <option value="PG">PG — Procter & Gamble</option>
+        <option value="HD">HD — Home Depot</option>
+        <option value="WMT">WMT — Walmart Inc.</option>
+        <option value="BAC">BAC — Bank of America</option>
+      </select>
+    </div>
+    <div class="company-info" id="companyInfo">
+      <div>
+        <div class="company-name" id="companyFullName">Apple Inc.</div>
+        <div style="display:flex;gap:6px;margin-top:4px;">
+          <span class="company-sector" id="companySector">Technology</span>
+          <span class="company-sector" id="companyIndex">S&P 500</span>
+        </div>
+      </div>
+    </div>
+    <div class="price-display">
+      <div class="current-price" id="currentPrice">$—</div>
+      <div class="price-change" id="priceChange">—</div>
+    </div>
+  </div>
+
+  <!-- KEY METRICS -->
+  <div class="section-label">Valuation Metrics</div>
+  <div class="metrics-grid" style="margin-bottom:16px;" id="metricsGrid">
+    <!-- filled by JS -->
+  </div>
+
+  <!-- MAIN TWO-COL -->
+  <div class="two-col" style="margin-bottom:16px;">
+
+    <!-- LEFT: Chart + Scenario Builder -->
+    <div style="display:flex;flex-direction:column;gap:16px;">
+
+      <!-- PRICE CHART -->
+      <div class="panel">
+        <div class="panel-header">
+          <div>
+            <div class="panel-title">Price History</div>
+            <div class="panel-title-mono" id="chartSubtitle">30-Day Performance</div>
+          </div>
+          <div class="period-tabs">
+            <button class="period-tab active" onclick="setPeriod(30,this)">1M</button>
+            <button class="period-tab" onclick="setPeriod(90,this)">3M</button>
+            <button class="period-tab" onclick="setPeriod(180,this)">6M</button>
+            <button class="period-tab" onclick="setPeriod(365,this)">1Y</button>
+          </div>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="priceChart"></canvas>
+        </div>
+      </div>
+
+      <!-- SCENARIO BUILDER -->
+      <div class="panel">
+        <div class="panel-header">
+          <div>
+            <div class="panel-title">📐 Interactive Scenario Builder</div>
+            <div class="panel-title-mono">Adjust assumptions to model fair value</div>
+          </div>
+        </div>
+        <div class="tab-bar">
+          <button class="tab-btn active" onclick="switchTab('valuation',this)">Valuation Model</button>
+          <button class="tab-btn" onclick="switchTab('growth',this)">Growth Analysis</button>
+        </div>
+
+        <!-- VALUATION TAB -->
+        <div class="tab-content active" id="tab-valuation">
+          <div style="display:grid;grid-template-columns:1fr 320px;gap:20px;">
+            <div class="sliders-panel">
+              <div class="slider-row">
+                <div class="slider-header">
+                  <span class="slider-name">Forward P/E Multiple</span>
+                  <span class="slider-val" id="val_pe">—</span>
+                </div>
+                <input type="range" id="sl_pe" min="5" max="80" step="0.5" oninput="updateScenario()">
+                <div class="slider-range-labels"><span>5×</span><span>Sector avg</span><span>80×</span></div>
+              </div>
+              <div class="slider-row">
+                <div class="slider-header">
+                  <span class="slider-name">EPS Growth Rate (YoY %)</span>
+                  <span class="slider-val" id="val_growth">—</span>
+                </div>
+                <input type="range" id="sl_growth" min="-20" max="60" step="0.5" oninput="updateScenario()">
+                <div class="slider-range-labels"><span>-20%</span><span>Base case</span><span>+60%</span></div>
+              </div>
+              <div class="slider-row">
+                <div class="slider-header">
+                  <span class="slider-name">Discount Rate (WACC %)</span>
+                  <span class="slider-val" id="val_wacc">—</span>
+                </div>
+                <input type="range" id="sl_wacc" min="4" max="20" step="0.5" oninput="updateScenario()">
+                <div class="slider-range-labels"><span>4%</span><span>8%</span><span>20%</span></div>
+              </div>
+              <div class="slider-row">
+                <div class="slider-header">
+                  <span class="slider-name">Terminal Growth Rate (%)</span>
+                  <span class="slider-val" id="val_tgr">—</span>
+                </div>
+                <input type="range" id="sl_tgr" min="0" max="6" step="0.1" oninput="updateScenario()">
+                <div class="slider-range-labels"><span>0%</span><span>2.5%</span><span>6%</span></div>
+              </div>
+            </div>
+            <div class="scenario-output" style="align-self:start;">
+              <div class="scenario-row"><span class="scenario-key">Adj. EPS (Next FY)</span><span class="scenario-val" id="sc_eps">—</span></div>
+              <div class="scenario-row"><span class="scenario-key">Applied P/E</span><span class="scenario-val" id="sc_pe">—</span></div>
+              <div class="scenario-row"><span class="scenario-key">DCF Terminal Value</span><span class="scenario-val" id="sc_dcf">—</span></div>
+              <div class="scenario-row"><span class="scenario-key">Blended Fair Value</span><span class="scenario-val" id="sc_blend">—</span></div>
+              <div class="fair-value-highlight">
+                <div class="fair-value-label">Implied Fair Value</div>
+                <div class="fair-value-number" id="sc_fairValue">$—</div>
+                <div class="upside" id="sc_upside">—</div>
+              </div>
+              <div style="margin-top:12px;">
+                <div class="derived-metrics">
+                  <div class="derived-item"><div class="derived-label">EY (Adj)</div><div class="derived-value" id="sc_ey">—</div></div>
+                  <div class="derived-item"><div class="derived-label">PEG (Adj)</div><div class="derived-value" id="sc_peg">—</div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- GROWTH TAB -->
+        <div class="tab-content" id="tab-growth">
+          <div style="position:relative;height:260px;"><canvas id="growthChart"></canvas></div>
+          <div class="sector-legend" id="growthLegend"></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT: AI Sentiment -->
+    <div>
+      <div class="ai-panel">
+        <div class="ai-header">
+          <div class="ai-icon">✦</div>
+          <div>
+            <div class="ai-title">AI Sentiment Analysis</div>
+            <div class="ai-subtitle">Powered by Claude · Real-time web research</div>
+          </div>
+        </div>
+        <div class="ai-body">
+          <button class="ai-trigger-btn" id="aiBtn" onclick="runSentiment()">
+            ✦ Analyse <span id="aiBtnTicker">AAPL</span>
+          </button>
+          <div id="aiLoadingDiv" style="display:none;" class="ai-loading">
+            <div class="spinner"></div>
+            <span id="aiLoadingText">Researching financial data...</span>
+          </div>
+          <div id="aiResult">
+            <div class="ai-placeholder">
+              <div class="ai-placeholder-icon">📊</div>
+              <div class="ai-placeholder-text">Click the button above to run an AI-powered deep analysis of the selected company, including market sentiment, valuation signals, and risk factors.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COMPARISON TABLE -->
+  <div class="section-label">S&P 500 Watchlist — Valuation Comparison</div>
+  <div class="panel table-panel" style="margin-bottom:16px;">
+    <table class="fin-table" id="compTable">
+      <thead>
+        <tr>
+          <th>Ticker</th>
+          <th>Company</th>
+          <th>Price</th>
+          <th>P/E</th>
+          <th>Earn. Yield</th>
+          <th>PEG</th>
+          <th>P/B</th>
+          <th>1D Chg</th>
+          <th>Rating</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+
+  <!-- SECTOR CHART -->
+  <div class="section-label">Sector Comparison — Avg P/E</div>
+  <div class="panel" style="margin-bottom:16px;">
+    <div style="position:relative;height:200px;"><canvas id="sectorChart"></canvas></div>
+  </div>
+
+</div>
+
+<div class="footer">
+  EquityLens · Financial data is simulated for demonstration. Not financial advice. ·
+  AI analysis powered by Anthropic Claude · &copy; 2026
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+// FINANCIAL DATA
+// ═══════════════════════════════════════════════
+const COMPANIES = {
+  AAPL: { name:'Apple Inc.', sector:'Technology', price:212.5, eps:6.43, pe:33.0, pb:52.1, peg:2.45, growth:13.5, wacc:8.2, tgr:3.0 },
+  MSFT: { name:'Microsoft Corp.', sector:'Technology', price:421.8, eps:12.05, pe:35.0, pb:13.2, peg:2.10, growth:16.8, wacc:8.0, tgr:3.5 },
+  NVDA: { name:'NVIDIA Corp.', sector:'Technology', price:875.4, eps:13.46, pe:65.0, pb:42.0, peg:1.78, growth:36.5, wacc:9.5, tgr:4.0 },
+  GOOGL: { name:'Alphabet Inc.', sector:'Communication', price:178.2, eps:7.65, pe:23.3, pb:7.1, peg:1.30, growth:17.9, wacc:8.5, tgr:3.2 },
+  AMZN: { name:'Amazon.com Inc.', sector:'Consumer Disc.', price:196.5, eps:4.84, pe:40.6, pb:8.8, peg:1.95, growth:20.8, wacc:9.0, tgr:3.8 },
+  META: { name:'Meta Platforms', sector:'Communication', price:548.6, eps:21.32, pe:25.7, pb:8.3, peg:1.12, growth:23.0, wacc:9.2, tgr:3.5 },
+  TSLA: { name:'Tesla Inc.', sector:'Consumer Disc.', price:174.9, eps:3.19, pe:54.8, pb:10.5, peg:3.42, growth:16.0, wacc:11.0, tgr:4.5 },
+  JPM: { name:'JPMorgan Chase', sector:'Financials', price:214.3, eps:17.52, pe:12.2, pb:2.1, peg:1.48, growth:8.2, wacc:9.8, tgr:2.5 },
+  JNJ: { name:'Johnson & Johnson', sector:'Healthcare', price:154.8, eps:8.62, pe:18.0, pb:5.6, peg:2.18, growth:8.2, wacc:7.5, tgr:2.2 },
+  V: { name:'Visa Inc.', sector:'Financials', price:278.5, eps:9.42, pe:29.6, pb:13.8, peg:1.82, growth:16.2, wacc:8.0, tgr:3.0 },
+  UNH: { name:'UnitedHealth Group', sector:'Healthcare', price:535.2, eps:26.84, pe:19.9, pb:5.2, peg:1.52, growth:13.1, wacc:8.2, tgr:2.8 },
+  PG: { name:'Procter & Gamble', sector:'Consumer Staples', price:162.4, eps:6.52, pe:24.9, pb:7.6, peg:3.08, growth:8.1, wacc:7.2, tgr:2.5 },
+  HD: { name:'Home Depot', sector:'Consumer Disc.', price:378.2, eps:17.28, pe:21.9, pb:null, peg:1.76, growth:12.4, wacc:8.5, tgr:2.8 },
+  WMT: { name:'Walmart Inc.', sector:'Consumer Staples', price:92.6, eps:2.84, pe:32.6, pb:7.4, peg:2.52, growth:12.9, wacc:7.8, tgr:2.5 },
+  BAC: { name:'Bank of America', sector:'Financials', price:40.8, eps:3.21, pe:12.7, pb:1.3, peg:1.61, growth:7.9, wacc:9.5, tgr:2.2 },
+};
+
+const SECTOR_PE = {
+  'Technology': 38, 'Communication': 24, 'Consumer Disc.': 30,
+  'Financials': 14, 'Healthcare': 20, 'Consumer Staples': 27,
+};
+
+let currentTicker = 'AAPL';
+let priceChartInstance = null;
+let growthChartInstance = null;
+let sectorChartInstance = null;
+let currentPeriod = 30;
+let liveInterval = null;
+
+// Random walk for price simulation
+function genPriceHistory(basePrice, days, volatility = 0.012) {
+  const prices = [];
+  let p = basePrice * (1 - (Math.random() * 0.12 + 0.04));
+  const labels = [];
+  const now = new Date();
+  for (let i = days; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    labels.push(d.toLocaleDateString('en-US', { month:'short', day:'numeric' }));
+    prices.push(+p.toFixed(2));
+    p = p * (1 + (Math.random() - 0.48) * volatility);
+  }
+  prices[prices.length - 1] = basePrice;
+  return { labels, prices };
+}
+
+function fmtMoney(v) { return v != null ? '$' + v.toLocaleString('en-US', {minimumFractionDigits:2,maximumFractionDigits:2}) : '—'; }
+function fmtPct(v) { return v != null ? v.toFixed(2) + '%' : '—'; }
+function fmtX(v) { return v != null ? v.toFixed(1) + '×' : '—'; }
+
+// ═══════════════════════════════════════════════
+// LOAD COMPANY
+// ═══════════════════════════════════════════════
+function loadCompany(ticker) {
+  currentTicker = ticker;
+  const d = COMPANIES[ticker];
+  document.getElementById('companyFullName').textContent = d.name;
+  document.getElementById('companySector').textContent = d.sector;
+
+  // Simulate live price
+  const live = d.price + (Math.random() - 0.5) * d.price * 0.005;
+  const change = live - (d.price * 0.985);
+  const changePct = (change / (d.price * 0.985)) * 100;
+  document.getElementById('currentPrice').textContent = fmtMoney(live);
+  const changeEl = document.getElementById('priceChange');
+  const sign = change >= 0 ? '+' : '';
+  changeEl.textContent = `${sign}${change.toFixed(2)} (${sign}${changePct.toFixed(2)}%)`;
+  changeEl.className = 'price-change ' + (change >= 0 ? 'pos' : 'neg');
+
+  document.getElementById('aiBtnTicker').textContent = ticker;
+  document.getElementById('aiResult').innerHTML = `
+    <div class="ai-placeholder">
+      <div class="ai-placeholder-icon">📊</div>
+      <div class="ai-placeholder-text">Click the button above to run an AI-powered deep analysis of ${d.name}, including market sentiment, valuation signals, and risk factors.</div>
+    </div>`;
+
+  renderMetrics(d);
+  renderPriceChart(d, currentPeriod);
+  renderGrowthChart();
+  initSliders(d);
+  updateScenario();
+}
+
+// ═══════════════════════════════════════════════
+// METRIC TOOLTIP DEFINITIONS
+// ═══════════════════════════════════════════════
+const METRIC_TIPS = {
+  'P/E Ratio': {
+    full: 'Price-to-Earnings Ratio',
+    desc: 'Measures how much investors are willing to pay per dollar of earnings. A high P/E can reflect growth expectations; a low P/E may signal undervaluation or poor prospects.',
+    formula: 'P/E  =  Market Price per Share\n         ÷  Earnings per Share (EPS)',
+    interp: '< 15 → Potentially undervalued\n15–25 → Fair value range\n25–40 → Growth premium\n> 40 → Expensive / high expectations'
+  },
+  'Earning Yield': {
+    full: 'Earnings Yield (%)',
+    desc: 'The inverse of the P/E ratio, expressed as a percentage. Useful for comparing equity returns directly against bond yields or risk-free rates.',
+    formula: 'EY  =  EPS  ÷  Market Price\n     =  1 ÷ P/E  ×  100',
+    interp: '> 6% → Attractive vs. bonds\n3–6% → Moderate\n< 3% → Low, likely priced for growth'
+  },
+  'PEG Ratio': {
+    full: 'Price/Earnings-to-Growth Ratio',
+    desc: 'Adjusts the P/E ratio by expected earnings growth. A PEG below 1.0 suggests the stock may be undervalued relative to its growth rate — a refinement over raw P/E.',
+    formula: 'PEG  =  P/E Ratio\n       ÷  EPS Growth Rate (%)',
+    interp: '< 1.0 → Undervalued for its growth\n1.0–1.5 → Fair\n1.5–2.5 → Slight premium\n> 2.5 → Stretched valuation'
+  },
+  'P/B Ratio': {
+    full: 'Price-to-Book Ratio',
+    desc: 'Compares the market value of a company to its accounting book value (net assets). Especially relevant for asset-heavy sectors like financials and industrials.',
+    formula: 'P/B  =  Market Price per Share\n       ÷  Book Value per Share\n\nBook Value = Total Assets − Liabilities',
+    interp: '< 1 → Trading below net assets\n1–3 → Moderate premium\n3–10 → High premium (intangibles/brand)\n> 10 → Very high (tech / light-asset firms)'
+  },
+  'EPS (TTM)': {
+    full: 'Earnings Per Share — Trailing 12 Months',
+    desc: 'The total net profit attributable to each outstanding share over the past 12 months. A key profitability benchmark used in most valuation ratios.',
+    formula: 'EPS  =  Net Income − Preferred Dividends\n       ÷  Weighted Avg. Shares Outstanding',
+    interp: 'Rising EPS trend → improving profitability\nDeclining EPS → margin pressure or dilution\nCompare vs. analyst estimates for beats/misses'
+  },
+  'Growth Rate': {
+    full: 'EPS Year-over-Year Growth Estimate',
+    desc: 'The expected percentage increase in earnings per share versus the prior year. Drives PEG ratio and DCF fair value, and is one of the most sensitive inputs in any valuation model.',
+    formula: 'Growth  =  (EPS_t  −  EPS_{t-1})\n           ÷  EPS_{t-1}  ×  100',
+    interp: '> 25% → High-growth / expansion phase\n10–25% → Healthy compounder\n5–10% → Mature / stable\n< 5% → Slow growth or cyclical'
+  }
+};
+
+const ttEl = document.getElementById('metricTooltip');
+let ttTimeout = null;
+
+function showTooltip(e, key) {
+  const tip = METRIC_TIPS[key];
+  if (!tip) return;
+  document.getElementById('mttName').textContent = key;
+  document.getElementById('mttFull').textContent = tip.full;
+  document.getElementById('mttDesc').textContent = tip.desc;
+  document.getElementById('mttFormula').textContent = tip.formula;
+  document.getElementById('mttInterp').textContent = tip.interp;
+  positionTooltip(e);
+  clearTimeout(ttTimeout);
+  ttEl.classList.add('visible');
+}
+
+function positionTooltip(e) {
+  const pad = 14;
+  const tw = 260;
+  let x = e.clientX + pad;
+  let y = e.clientY + pad;
+  if (x + tw > window.innerWidth - 8) x = e.clientX - tw - pad;
+  if (y + 320 > window.innerHeight - 8) y = e.clientY - 320 - pad;
+  ttEl.style.left = x + 'px';
+  ttEl.style.top = y + 'px';
+}
+
+function moveTooltip(e) { positionTooltip(e); }
+
+function hideTooltip() {
+  ttTimeout = setTimeout(() => ttEl.classList.remove('visible'), 80);
+}
+
+document.addEventListener('mousemove', e => {
+  if (ttEl.classList.contains('visible')) positionTooltip(e);
+});
+
+
+function renderMetrics(d) {
+  const ey = (1 / d.pe * 100);
+  const mktCap = (d.price * (d.pe * d.eps)).toExponential(2);
+
+  function peStatus(pe) {
+    if (pe < 15) return ['status-good', 'Undervalued'];
+    if (pe < 25) return ['status-neu', 'Fair'];
+    if (pe < 40) return ['status-warn', 'Premium'];
+    return ['status-bad', 'Expensive'];
+  }
+  function eyStatus(ey) {
+    if (ey > 6) return ['status-good', 'Attractive'];
+    if (ey > 3.5) return ['status-neu', 'Moderate'];
+    return ['status-warn', 'Low yield'];
+  }
+  function pegStatus(peg) {
+    if (peg < 1) return ['status-good', 'Undervalued'];
+    if (peg < 1.5) return ['status-good', 'Fair'];
+    if (peg < 2.5) return ['status-warn', 'Premium'];
+    return ['status-bad', 'Stretched'];
+  }
+  function pbStatus(pb) {
+    if (!pb) return ['status-neu', 'N/A'];
+    if (pb < 2) return ['status-good', 'Low'];
+    if (pb < 6) return ['status-neu', 'Moderate'];
+    if (pb < 15) return ['status-warn', 'High'];
+    return ['status-bad', 'Very High'];
+  }
+
+  const [peSt, peL] = peStatus(d.pe);
+  const [eySt, eyL] = eyStatus(ey);
+  const [pegSt, pegL] = pegStatus(d.peg);
+  const [pbSt, pbL] = pbStatus(d.pb);
+  const pbVal = d.pb != null ? d.pb.toFixed(1) + '×' : 'N/A';
+
+  const metrics = [
+    { label:'P/E Ratio', value: d.pe.toFixed(1)+'×', sub:`EPS $${d.eps.toFixed(2)}`, status:[peSt,peL], barPct: Math.min(100, d.pe/80*100), barColor: d.pe < 20 ? '#00e5a0' : d.pe < 35 ? '#f5a623' : '#ff4d6a' },
+    { label:'Earning Yield', value: ey.toFixed(2)+'%', sub:'1 / P/E × 100', status:[eySt,eyL], barPct: Math.min(100, ey/10*100), barColor: ey > 5 ? '#00e5a0' : ey > 3 ? '#f5a623' : '#ff4d6a' },
+    { label:'PEG Ratio', value: d.peg.toFixed(2)+'×', sub:`Growth: +${d.growth.toFixed(1)}%`, status:[pegSt,pegL], barPct: Math.min(100, d.peg/4*100), barColor: d.peg < 1.5 ? '#00e5a0' : d.peg < 2.5 ? '#f5a623' : '#ff4d6a' },
+    { label:'P/B Ratio', value: pbVal, sub:'Price / Book Value', status:[pbSt,pbL], barPct: d.pb ? Math.min(100, d.pb/50*100) : 0, barColor: '#4d9fff' },
+    { label:'EPS (TTM)', value: '$'+d.eps.toFixed(2), sub:'Trailing 12 months', status:['status-neu','Actual'], barPct: 60, barColor:'#7c5cfc' },
+    { label:'Growth Rate', value: '+'+d.growth.toFixed(1)+'%', sub:'EPS YoY Est.', status: d.growth > 20 ? ['status-good','High'] : d.growth > 10 ? ['status-neu','Moderate'] : ['status-warn','Low'], barPct: Math.min(100, d.growth/50*100), barColor:'#7c5cfc' },
+  ];
+
+  document.getElementById('metricsGrid').innerHTML = metrics.map(m => `
+    <div class="metric-card" data-tip="${m.label}">
+      <div class="metric-label">${m.label} <span style="opacity:0.35;font-size:9px;">ⓘ</span></div>
+      <div class="metric-value">${m.value}</div>
+      <div class="metric-sub">${m.sub}</div>
+      <div class="metric-bar"><div class="metric-bar-fill" style="width:${m.barPct}%;background:${m.barColor};"></div></div>
+      <div class="metric-status ${m.status[0]}">${m.status[1]}</div>
+    </div>`).join('');
+
+  document.querySelectorAll('.metric-card[data-tip]').forEach(card => {
+    card.addEventListener('mouseenter', e => showTooltip(e, card.dataset.tip));
+    card.addEventListener('mousemove', moveTooltip);
+    card.addEventListener('mouseleave', hideTooltip);
+  });
+}
+
+// ═══════════════════════════════════════════════
+// PRICE CHART
+// ═══════════════════════════════════════════════
+function renderPriceChart(d, days) {
+  const { labels, prices } = genPriceHistory(d.price, days);
+  const start = prices[0], end = prices[prices.length-1];
+  const isUp = end >= start;
+  const color = isUp ? '#00e5a0' : '#ff4d6a';
+
+  if (priceChartInstance) priceChartInstance.destroy();
+  priceChartInstance = new Chart(document.getElementById('priceChart'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        data: prices,
+        borderColor: color,
+        borderWidth: 1.5,
+        pointRadius: 0,
+        tension: 0.3,
+        fill: true,
+        backgroundColor: (ctx) => {
+          const g = ctx.chart.ctx.createLinearGradient(0, 0, 0, 240);
+          g.addColorStop(0, isUp ? 'rgba(0,229,160,0.18)' : 'rgba(255,77,106,0.18)');
+          g.addColorStop(1, 'rgba(0,0,0,0)');
+          return g;
+        }
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: {
+        backgroundColor:'#1a1e28', borderColor:'rgba(255,255,255,0.1)', borderWidth:1,
+        titleColor:'#7a7f94', bodyColor:'#e8eaf0',
+        callbacks: { label: ctx => fmtMoney(ctx.raw) }
+      }},
+      scales: {
+        x: { grid: { color:'rgba(255,255,255,0.04)' }, ticks: { color:'#4a4f63', maxTicksLimit: 6, font:{family:'IBM Plex Mono',size:10} } },
+        y: { grid: { color:'rgba(255,255,255,0.04)' }, ticks: { color:'#4a4f63', font:{family:'IBM Plex Mono',size:10}, callback: v => '$'+v.toFixed(0) } }
+      },
+      interaction: { mode:'index', intersect:false }
+    }
+  });
+}
+
+function setPeriod(days, btn) {
+  currentPeriod = days;
+  document.querySelectorAll('.period-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const labels = {30:'30-Day',90:'3-Month',180:'6-Month',365:'1-Year'};
+  document.getElementById('chartSubtitle').textContent = labels[days] + ' Performance';
+  renderPriceChart(COMPANIES[currentTicker], days);
+}
+
+// ═══════════════════════════════════════════════
+// GROWTH CHART
+// ═══════════════════════════════════════════════
+function renderGrowthChart() {
+  const tickers = Object.keys(COMPANIES).slice(0,8);
+  const colors = ['#7c5cfc','#4d9fff','#00e5a0','#f5a623','#ff4d6a','#00c2ff','#a78bfa','#34d399'];
+
+  if (growthChartInstance) growthChartInstance.destroy();
+  growthChartInstance = new Chart(document.getElementById('growthChart'), {
+    type: 'bar',
+    data: {
+      labels: tickers,
+      datasets: [
+        { label:'P/E Ratio', data: tickers.map(t => COMPANIES[t].pe), backgroundColor: '#7c5cfc66', borderColor:'#7c5cfc', borderWidth:1 },
+        { label:'EPS Growth %', data: tickers.map(t => COMPANIES[t].growth), backgroundColor:'#00e5a044', borderColor:'#00e5a0', borderWidth:1 },
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins: { legend:{display:false}, tooltip:{backgroundColor:'#1a1e28',titleColor:'#7a7f94',bodyColor:'#e8eaf0',borderColor:'rgba(255,255,255,0.1)',borderWidth:1} },
+      scales: {
+        x: { grid:{color:'rgba(255,255,255,0.04)'}, ticks:{color:'#7a7f94',font:{family:'IBM Plex Mono',size:10}} },
+        y: { grid:{color:'rgba(255,255,255,0.04)'}, ticks:{color:'#7a7f94',font:{family:'IBM Plex Mono',size:10}} }
+      }
+    }
+  });
+  document.getElementById('growthLegend').innerHTML = `
+    <div class="legend-item"><div class="legend-dot" style="background:#7c5cfc"></div>P/E Ratio</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#00e5a0"></div>EPS Growth %</div>`;
+}
+
+// ═══════════════════════════════════════════════
+// SECTOR CHART
+// ═══════════════════════════════════════════════
+function renderSectorChart() {
+  const sectors = Object.keys(SECTOR_PE);
+  const colors = ['#7c5cfc','#4d9fff','#00e5a0','#f5a623','#ff4d6a','#00c2ff'];
+  if (sectorChartInstance) sectorChartInstance.destroy();
+  sectorChartInstance = new Chart(document.getElementById('sectorChart'), {
+    type: 'bar',
+    data: {
+      labels: sectors,
+      datasets: [{ label:'Avg P/E', data: sectors.map(s => SECTOR_PE[s]), backgroundColor: colors, borderWidth:0, borderRadius:4 }]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins: { legend:{display:false}, tooltip:{backgroundColor:'#1a1e28',titleColor:'#7a7f94',bodyColor:'#e8eaf0',borderColor:'rgba(255,255,255,0.1)',borderWidth:1, callbacks:{label:ctx=>'P/E: '+ctx.raw+'×'}}},
+      scales: {
+        x: { grid:{display:false}, ticks:{color:'#7a7f94',font:{family:'IBM Plex Mono',size:10}} },
+        y: { grid:{color:'rgba(255,255,255,0.04)'}, ticks:{color:'#7a7f94',font:{family:'IBM Plex Mono',size:10}} }
+      }
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════
+// SLIDERS + SCENARIO
+// ═══════════════════════════════════════════════
+function initSliders(d) {
+  document.getElementById('sl_pe').value = d.pe;
+  document.getElementById('sl_growth').value = d.growth;
+  document.getElementById('sl_wacc').value = d.wacc;
+  document.getElementById('sl_tgr').value = d.tgr;
+  document.getElementById('val_pe').textContent = d.pe.toFixed(1) + '×';
+  document.getElementById('val_growth').textContent = '+' + d.growth.toFixed(1) + '%';
+  document.getElementById('val_wacc').textContent = d.wacc.toFixed(1) + '%';
+  document.getElementById('val_tgr').textContent = d.tgr.toFixed(1) + '%';
+}
+
+function updateScenario() {
+  const d = COMPANIES[currentTicker];
+  const pe = parseFloat(document.getElementById('sl_pe').value);
+  const growth = parseFloat(document.getElementById('sl_growth').value);
+  const wacc = parseFloat(document.getElementById('sl_wacc').value) / 100;
+  const tgr = parseFloat(document.getElementById('sl_tgr').value) / 100;
+
+  document.getElementById('val_pe').textContent = pe.toFixed(1) + '×';
+  document.getElementById('val_growth').textContent = (growth >= 0 ? '+' : '') + growth.toFixed(1) + '%';
+  document.getElementById('val_wacc').textContent = (wacc*100).toFixed(1) + '%';
+  document.getElementById('val_tgr').textContent = (tgr*100).toFixed(1) + '%';
+
+  const fwdEps = d.eps * (1 + growth / 100);
+  const peVal = pe * fwdEps;
+  const terminalVal = (fwdEps * (1 + tgr)) / (wacc - tgr);
+  const dcfVal = terminalVal / Math.pow(1 + wacc, 5);
+  const blended = peVal * 0.5 + dcfVal * 0.5;
+  const upside = ((blended - d.price) / d.price) * 100;
+  const ey = (1 / pe * 100);
+  const peg = pe / growth;
+
+  document.getElementById('sc_eps').textContent = '$' + fwdEps.toFixed(2);
+  document.getElementById('sc_pe').textContent = pe.toFixed(1) + '×';
+  document.getElementById('sc_dcf').textContent = '$' + dcfVal.toFixed(0);
+  document.getElementById('sc_blend').textContent = '$' + blended.toFixed(0);
+  document.getElementById('sc_fairValue').textContent = '$' + blended.toFixed(2);
+  document.getElementById('sc_ey').textContent = ey.toFixed(2) + '%';
+  document.getElementById('sc_peg').textContent = peg.toFixed(2) + '×';
+
+  const upsideEl = document.getElementById('sc_upside');
+  upsideEl.textContent = (upside >= 0 ? '▲ +' : '▼ ') + upside.toFixed(1) + '% vs current price';
+  upsideEl.className = 'upside ' + (upside >= 0 ? 'pos' : 'neg');
+
+  const fvEl = document.getElementById('sc_fairValue');
+  fvEl.style.color = upside > 10 ? 'var(--green)' : upside > -10 ? 'var(--amber)' : 'var(--red)';
+}
+
+// ═══════════════════════════════════════════════
+// COMPARISON TABLE
+// ═══════════════════════════════════════════════
+function renderTable() {
+  const rows = Object.entries(COMPANIES).map(([ticker, d]) => {
+    const chg = (Math.random() - 0.48) * 3;
+    const ey = (1/d.pe*100).toFixed(2) + '%';
+    const pb = d.pb != null ? d.pb.toFixed(1)+'×' : 'N/A';
+    const pePill = d.pe < 20 ? 'pill-good' : d.pe < 35 ? 'pill-warn' : 'pill-bad';
+    const pegPill = d.peg < 1.5 ? 'pill-good' : d.peg < 2.5 ? 'pill-warn' : 'pill-bad';
+    const rating = d.peg < 1.5 && d.pe < 30 ? '★ Buy' : d.pe > 40 ? '○ Overweight' : '● Hold';
+    const ratingClass = rating.includes('Buy') ? 'pos' : rating.includes('Hold') ? 'neu' : '';
+    return `<tr>
+      <td class="ticker">${ticker}</td>
+      <td style="color:var(--text-muted);font-size:11px;">${d.name.substring(0,18)}</td>
+      <td>${fmtMoney(d.price)}</td>
+      <td><span class="pill ${pePill}">${d.pe.toFixed(1)}×</span></td>
+      <td>${ey}</td>
+      <td><span class="pill ${pegPill}">${d.peg.toFixed(2)}×</span></td>
+      <td>${pb}</td>
+      <td class="${chg>=0?'pos':'neg'}">${chg>=0?'+':''}${chg.toFixed(2)}%</td>
+      <td class="${ratingClass}" style="font-weight:600;font-size:11px;">${rating}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('tableBody').innerHTML = rows;
+}
+
+// ═══════════════════════════════════════════════
+// AI SENTIMENT
+// ═══════════════════════════════════════════════
+async function runSentiment() {
+  const d = COMPANIES[currentTicker];
+  const btn = document.getElementById('aiBtn');
+  const loadingDiv = document.getElementById('aiLoadingDiv');
+  const resultDiv = document.getElementById('aiResult');
+
+  btn.disabled = true;
+  loadingDiv.style.display = 'flex';
+  resultDiv.innerHTML = '';
+
+  const loadingMessages = [
+    'Fetching latest market data...',
+    'Analysing valuation signals...',
+    'Processing sentiment indicators...',
+    'Synthesising risk factors...'
+  ];
+  let lIdx = 0;
+  const lInterval = setInterval(() => {
+    lIdx = (lIdx + 1) % loadingMessages.length;
+    document.getElementById('aiLoadingText').textContent = loadingMessages[lIdx];
+  }, 1800);
+
+  const ey = (1 / d.pe * 100).toFixed(2);
+  const prompt = `You are a senior equity research analyst at a top-tier investment bank. Analyse ${d.name} (${currentTicker}) with the following current financial metrics:
+- Current Price: $${d.price}
+- P/E Ratio: ${d.pe.toFixed(1)}×
+- Earning Yield: ${ey}%
+- PEG Ratio: ${d.peg.toFixed(2)}×
+- P/B Ratio: ${d.pb ? d.pb.toFixed(1)+'×' : 'N/A (negative equity)'}
+- EPS (TTM): $${d.eps.toFixed(2)}
+- Estimated EPS Growth: +${d.growth.toFixed(1)}%
+- Sector: ${d.sector}
+
+Provide a concise, professional financial sentiment analysis. Return ONLY a JSON object with this exact structure (no markdown, no backticks):
+{
+  "sentiment_score": <integer 0-100>,
+  "sentiment_label": "<Strongly Bullish|Bullish|Neutral|Bearish|Strongly Bearish>",
+  "summary": "<2-3 sentence executive summary of investment case>",
+  "valuation_analysis": "<2-3 sentences on valuation attractiveness vs peers and historical>",
+  "key_catalysts": ["<catalyst 1>", "<catalyst 2>", "<catalyst 3>"],
+  "key_risks": ["<risk 1>", "<risk 2>", "<risk 3>"],
+  "analyst_note": "<1-2 sentences with a specific analytical insight or contrarian view>"
+}`;
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    const data = await response.json();
+    clearInterval(lInterval);
+    loadingDiv.style.display = 'none';
+    btn.disabled = false;
+
+    let jsonStr = '';
+    for (const block of data.content) {
+      if (block.type === 'text') jsonStr += block.text;
+    }
+
+    // Clean JSON
+    jsonStr = jsonStr.replace(/```json|```/g, '').trim();
+    const firstBrace = jsonStr.indexOf('{');
+    const lastBrace = jsonStr.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace !== -1) jsonStr = jsonStr.slice(firstBrace, lastBrace + 1);
+
+    const r = JSON.parse(jsonStr);
+    renderSentimentResult(r, d);
+  } catch (err) {
+    clearInterval(lInterval);
+    loadingDiv.style.display = 'none';
+    btn.disabled = false;
+    resultDiv.innerHTML = `<div style="color:var(--red);font-family:var(--font-mono);font-size:12px;padding:12px 0;">Error: ${err.message}<br><br><span style="color:var(--text-muted);">Please check your connection and try again.</span></div>`;
+  }
+}
+
+function renderSentimentResult(r, d) {
+  const score = r.sentiment_score;
+  const barColor = score >= 60 ? '#00e5a0' : score >= 40 ? '#f5a623' : '#ff4d6a';
+  const tagClass = score >= 60 ? 'tag-pos' : score >= 40 ? 'tag-neu' : 'tag-neg';
+  const tagBg = score >= 60 ? 'status-good' : score >= 40 ? 'status-warn' : 'status-bad';
+
+  const catalystTags = (r.key_catalysts || []).map(c =>
+    `<span class="ai-tag tag-pos">▲ ${c}</span>`).join('');
+  const riskTags = (r.key_risks || []).map(c =>
+    `<span class="ai-tag tag-neg">▼ ${c}</span>`).join('');
+
+  document.getElementById('aiResult').innerHTML = `
+    <div class="ai-output">
+      <div class="sentiment-meter">
+        <div class="sentiment-label-row">
+          <div class="sentiment-score" style="color:${barColor};">${score}<span style="font-size:14px;color:var(--text-muted);">/100</span></div>
+          <span class="sentiment-tag ${tagBg}">${r.sentiment_label}</span>
+        </div>
+        <div class="sentiment-bar-track"><div class="sentiment-bar-fill" style="width:${score}%;background:${barColor};"></div></div>
+      </div>
+      <div class="ai-divider"></div>
+      <div class="ai-sections">
+        <div>
+          <div class="ai-section-title">Executive Summary</div>
+          <div class="ai-text">${r.summary}</div>
+        </div>
+        <div>
+          <div class="ai-section-title">Valuation Analysis</div>
+          <div class="ai-text">${r.valuation_analysis}</div>
+        </div>
+        <div>
+          <div class="ai-section-title">Key Catalysts</div>
+          <div class="ai-tags">${catalystTags}</div>
+        </div>
+        <div>
+          <div class="ai-section-title">Key Risks</div>
+          <div class="ai-tags">${riskTags}</div>
+        </div>
+        <div class="ai-divider"></div>
+        <div>
+          <div class="ai-section-title">✦ Analyst Note</div>
+          <div class="ai-text" style="font-style:italic;color:var(--text-muted);">${r.analyst_note}</div>
+        </div>
+      </div>
+    </div>`;
+}
+
+// ═══════════════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════════════
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+  if (name === 'growth') setTimeout(renderGrowthChart, 50);
+}
+
+// ═══════════════════════════════════════════════
+// CLOCK
+// ═══════════════════════════════════════════════
+function updateClock() {
+  const now = new Date();
+  document.getElementById('navTime').textContent =
+    now.toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit', second:'2-digit' }) +
+    ' EST';
+}
+
+// ═══════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════
+loadCompany('AAPL');
+renderTable();
+renderSectorChart();
+updateClock();
+setInterval(updateClock, 1000);
+
+// Live price ticker simulation
+setInterval(() => {
+  const d = COMPANIES[currentTicker];
+  const live = d.price + (Math.random() - 0.5) * d.price * 0.003;
+  document.getElementById('currentPrice').textContent = fmtMoney(live);
+}, 5000);
+</script>
+</body>
+</html>
